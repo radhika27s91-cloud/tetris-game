@@ -13,6 +13,12 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v3
 
+      - name: Install ArgoCD CLI
+        run: |
+          sudo curl -sSL -o /usr/local/bin/argocd https://github.com/argoproj/argo-cd/releases/latest/download/argocd-linux-amd64
+          sudo chmod +x /usr/local/bin/argocd
+          argocd version
+
       - name: Login to ArgoCD
         run: |
           argocd login ${{ secrets.ARGOCD_SERVER }} \
@@ -24,7 +30,19 @@ jobs:
         run: |
           argocd app sync tetris-game
 
-      - name: Print Public URL
+      - name: Wait for LoadBalancer IP
         run: |
-          URL=$(kubectl get svc tetris-game -n default -o jsonpath='{.status.loadBalancer.ingress[0].hostname}')
+          echo "Waiting for LoadBalancer EXTERNAL-IP..."
+          for i in {1..30}; do
+            URL=$(kubectl get svc tetris-game -n default -o jsonpath='{.status.loadBalancer.ingress[0].hostname}' 2>/dev/null)
+            if [ -n "$URL" ]; then
+              echo "LoadBalancer is ready: $URL"
+              break
+            fi
+            sleep 10
+          done
+          if [ -z "$URL" ]; then
+            echo "LoadBalancer IP not ready after 5 minutes."
+            exit 1
+          fi
           echo "Tetris Game is live at: http://$URL"
