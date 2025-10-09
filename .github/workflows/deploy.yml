@@ -48,11 +48,4 @@ jobs:
         run: |
           argocd app sync tetris-game
 
-      # 6. Wait for LoadBalancer IP
-      - name: Wait for LoadBalancer IP
-        id: wait_lb
-        run: |
-          echo "Waiting for LoadBalancer EXTERNAL-IP..."
-          for i in {1..30}; do
-            URL=$(kubectl get svc tetris-game -n default -o jsonpath='{.status.loadBalancer.ingress[0].hostname}' 2>/dev/null)
-            if [ -n "$URL" ]; then
+      
