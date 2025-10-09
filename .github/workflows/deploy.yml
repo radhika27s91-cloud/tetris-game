@@ -13,12 +13,6 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v3
 
-      - name: Install ArgoCD CLI
-        run: |
-          sudo curl -sSL -o /usr/local/bin/argocd https://github.com/argoproj/argo-cd/releases/latest/download/argocd-linux-amd64
-          sudo chmod +x /usr/local/bin/argocd
-          argocd version
-
       - name: Login to ArgoCD
         run: |
           argocd login ${{ secrets.ARGOCD_SERVER }} \
