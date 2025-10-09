@@ -3,40 +3,34 @@ name: Deploy to AWS EKS
 on:
   push:
     branches:
-      - main  # deploy when main branch updates
+      - main
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
 
     steps:
-      # Step 1: Checkout the code
       - name: Checkout repository
         uses: actions/checkout@v3
 
-      # Step 2: Configure AWS credentials
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v2
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: us-east-1   # <-- Hardcoded region here
+          aws-region: us-east-1   # <-- your AWS region
 
-      # Step 3: Setup kubectl and kubeconfig
       - name: Setup kubectl
         run: |
           mkdir -p ~/.kube
           echo "${{ secrets.KUBE_CONFIG_DATA }}" | base64 --decode > ~/.kube/config
-          kubectl version --client
           kubectl get nodes
 
-      # Step 4: Deploy manifests
-      - name: Deploy to EKS
+      - name: Deploy manifests
         run: |
           kubectl apply -f deployment.yaml
           kubectl apply -f service.yaml
 
-      # Step 5: Verify rollout status
       - name: Verify rollout status
         run: |
           kubectl rollout status deployment/tetris-game
