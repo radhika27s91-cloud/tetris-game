@@ -14,18 +14,19 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
-      # 2️⃣ Install ArgoCD CLI
+      # 2️⃣ Install ArgoCD CLI (latest)
       - name: Install ArgoCD CLI
         run: |
           curl -sSL -o argocd https://github.com/argoproj/argo-cd/releases/latest/download/argocd-linux-amd64
           chmod +x argocd
           sudo mv argocd /usr/local/bin/
 
-      # 3️⃣ Login to ArgoCD using service account token
+      # 3️⃣ Login to ArgoCD using admin username/password
       - name: Login to ArgoCD
         run: |
           argocd login ${{ secrets.ARGOCD_SERVER }} \
-            --token ${{ secrets.ARGOCD_TOKEN }} \
+            --username admin \
+            --password ${{ secrets.ARGOCD_PASSWORD }} \
             --insecure
 
       # 4️⃣ Sync the ArgoCD application
