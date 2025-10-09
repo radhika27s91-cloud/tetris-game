@@ -1,4 +1,4 @@
-name: Deploy to ArgoCD
+name: Deploy Tetris Game via ArgoCD
 
 on:
   push:
@@ -10,21 +10,9 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # 1️⃣ Checkout the repository
-      - name: Checkout code
+      - name: Checkout repository
         uses: actions/checkout@v3
 
-      # 2️⃣ Install ArgoCD CLI if not already installed
-      - name: Install ArgoCD CLI
-        run: |
-          if ! command -v argocd &> /dev/null
-          then
-            curl -sSL -o argocd https://github.com/argoproj/argo-cd/releases/latest/download/argocd-linux-amd64
-            chmod +x argocd
-            sudo mv argocd /usr/local/bin/
-          fi
-
-      # 3️⃣ Login to ArgoCD using admin credentials
       - name: Login to ArgoCD
         run: |
           argocd login ${{ secrets.ARGOCD_SERVER }} \
@@ -32,8 +20,11 @@ jobs:
             --password ${{ secrets.ARGOCD_PASSWORD }} \
             --insecure
 
-      # 4️⃣ Sync the ArgoCD application
-      - name: Sync ArgoCD application
+      - name: Sync ArgoCD App
         run: |
           argocd app sync tetris-game
-          argocd app wait tetris-game --health --timeout 300
+
+      - name: Print Public URL
+        run: |
+          URL=$(kubectl get svc tetris-game -n default -o jsonpath='{.status.loadBalancer.ingress[0].hostname}')
+          echo "Tetris Game is live at: http://$URL"
