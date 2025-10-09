@@ -10,14 +10,17 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      # Step 1: Checkout repo
       - name: Checkout repository
         uses: actions/checkout@v3
 
+      # Step 2: Install ArgoCD CLI on runner
       - name: Install ArgoCD CLI
         run: |
           sudo curl -sSL -o /usr/local/bin/argocd https://github.com/argoproj/argo-cd/releases/latest/download/argocd-linux-amd64
           sudo chmod +x /usr/local/bin/argocd
 
+      # Step 3: Login to ArgoCD
       - name: Login to ArgoCD
         run: |
           argocd login ${{ secrets.ARGOCD_SERVER }} \
@@ -25,17 +28,21 @@ jobs:
             --password ${{ secrets.ARGOCD_PASSWORD }} \
             --insecure
 
+      # Step 4: Sync ArgoCD app (deployment + service)
       - name: Sync ArgoCD App
         run: |
           argocd app sync tetris-game
 
+      # Step 5: Wait for LoadBalancer IP
       - name: Wait for LoadBalancer IP
+        id: wait_lb
         run: |
           echo "Waiting for LoadBalancer EXTERNAL-IP..."
           for i in {1..30}; do
             URL=$(kubectl get svc tetris-game -n default -o jsonpath='{.status.loadBalancer.ingress[0].hostname}' 2>/dev/null)
             if [ -n "$URL" ]; then
               echo "LoadBalancer is ready: $URL"
+              echo "TETRIS_GAME_URL=http://$URL" >> $GITHUB_ENV
               break
             fi
             sleep 10
@@ -44,4 +51,8 @@ jobs:
             echo "LoadBalancer IP not ready after 5 minutes."
             exit 1
           fi
-          echo "Tetris Game is live at: http://$URL"
+
+      # Step 6: Print clickable live URL
+      - name: Tetris Game Live URL
+        run: |
+          echo "Your Tetris Game is live! Click here: $TETRIS_GAME_URL"
