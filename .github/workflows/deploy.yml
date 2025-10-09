@@ -1,31 +1,43 @@
-name: Deploy to EKS via ArgoCD
+name: Deploy to AWS EKS
 
 on:
   push:
     branches:
-      - main  # change to your deployment branch
+      - main  # deploy when main branch updates
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
 
     steps:
+      # Step 1: Checkout the code
       - name: Checkout repository
         uses: actions/checkout@v3
 
-      - name: Configure AWS CLI
+      # Step 2: Configure AWS credentials
+      - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v2
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: us-east-1  # change to your EKS region
+          aws-region: us-east-1   # <-- Hardcoded region here
 
-      - name: Set up Kubeconfig
+      # Step 3: Setup kubectl and kubeconfig
+      - name: Setup kubectl
         run: |
-          mkdir -p $HOME/.kube
-          echo "${{ secrets.KUBE_CONFIG_DATA }}" | base64 --decode > $HOME/.kube/config
-          kubectl get nodes  # tests connection
+          mkdir -p ~/.kube
+          echo "${{ secrets.KUBE_CONFIG_DATA }}" | base64 --decode > ~/.kube/config
+          kubectl version --client
+          kubectl get nodes
 
-      - name: Trigger ArgoCD sync
+      # Step 4: Deploy manifests
+      - name: Deploy to EKS
         run: |
-          argocd app sync tetris-game --grpc-web --auth-token ${{ secrets.ARGOCD_AUTH_TOKEN }}
+          kubectl apply -f deployment.yaml
+          kubectl apply -f service.yaml
+
+      # Step 5: Verify rollout status
+      - name: Verify rollout status
+        run: |
+          kubectl rollout status deployment/tetris-game
+          kubectl get svc
