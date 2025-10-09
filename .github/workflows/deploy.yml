@@ -10,17 +10,17 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # Step 1: Checkout repo
+      # 1. Checkout repository
       - name: Checkout repository
         uses: actions/checkout@v3
 
-      # Step 2: Install ArgoCD CLI on runner
+      # 2. Install ArgoCD CLI
       - name: Install ArgoCD CLI
         run: |
           sudo curl -sSL -o /usr/local/bin/argocd https://github.com/argoproj/argo-cd/releases/latest/download/argocd-linux-amd64
           sudo chmod +x /usr/local/bin/argocd
 
-      # Step 3: Login to ArgoCD
+      # 3. Login to ArgoCD
       - name: Login to ArgoCD
         run: |
           argocd login ${{ secrets.ARGOCD_SERVER }} \
@@ -28,12 +28,27 @@ jobs:
             --password ${{ secrets.ARGOCD_PASSWORD }} \
             --insecure
 
-      # Step 4: Sync ArgoCD app (deployment + service)
+      # 4. Create ArgoCD app if it doesn't exist
+      - name: Create ArgoCD Application
+        run: |
+          if ! argocd app get tetris-game > /dev/null 2>&1; then
+            echo "Application not found. Creating..."
+            argocd app create tetris-game \
+              --repo https://github.com/radhika27s91-cloud/tetris-game \
+              --path manifests \
+              --dest-server https://kubernetes.default.svc \
+              --dest-namespace default \
+              --sync-policy automated
+          else
+            echo "Application already exists."
+          fi
+
+      # 5. Sync ArgoCD app (deployment + service)
       - name: Sync ArgoCD App
         run: |
           argocd app sync tetris-game
 
-      # Step 5: Wait for LoadBalancer IP
+      # 6. Wait for LoadBalancer IP
       - name: Wait for LoadBalancer IP
         id: wait_lb
         run: |
@@ -41,18 +56,3 @@ jobs:
           for i in {1..30}; do
             URL=$(kubectl get svc tetris-game -n default -o jsonpath='{.status.loadBalancer.ingress[0].hostname}' 2>/dev/null)
             if [ -n "$URL" ]; then
-              echo "LoadBalancer is ready: $URL"
-              echo "TETRIS_GAME_URL=http://$URL" >> $GITHUB_ENV
-              break
-            fi
-            sleep 10
-          done
-          if [ -z "$URL" ]; then
-            echo "LoadBalancer IP not ready after 5 minutes."
-            exit 1
-          fi
-
-      # Step 6: Print clickable live URL
-      - name: Tetris Game Live URL
-        run: |
-          echo "Your Tetris Game is live! Click here: $TETRIS_GAME_URL"
